@@ -3,6 +3,7 @@ package main
 import (
 	"log"
 
+	"github.com/google/uuid"
 	"github.com/streadway/amqp"
 )
 
@@ -43,7 +44,8 @@ func main() {
 	// failOnError(err, "Failed to declare a queue")
 	// fmt.Println("queue name:", q.Name)
 
-	body := "Hello World!"
+	body := uuid.NewString()
+	log.Println("send a message:", body)
 
 	err = ch.Publish(
 		exchangeName, // exchange
