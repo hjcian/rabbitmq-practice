@@ -44,8 +44,16 @@ func main() {
 	forever := make(chan bool)
 
 	go func() {
+		log.Println("start worker 1")
 		for d := range msgs {
-			log.Printf("Received a message: %s", d.Body)
+			log.Printf("[1] Received a message: %s", d.Body)
+		}
+	}()
+
+	go func() {
+		log.Println("start worker 2")
+		for d := range msgs {
+			log.Printf("[2] Received a message: %s", d.Body)
 		}
 	}()
 
