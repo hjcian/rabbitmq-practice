@@ -4,27 +4,69 @@ import (
 	"github.com/streadway/amqp"
 )
 
+//
+// Options for subscriber
+//
+
 type SubscriberOption func(s *subscriberOptions)
 
 type subscriberOptions struct {
-	routingKey string
+	// NOTE:
+	// for avoid the confusion with Channel.Publish parameter,
+	// the official tutorial calls the relationship between queue and exchange to "binding key".
+	// ref here: https://www.rabbitmq.com/tutorials/tutorial-four-go.html
+	bindingKey string
 }
 
-func WithRoutingKey(routingKey string) SubscriberOption {
+func WithBindingKey(bindingKey string) SubscriberOption {
 	return func(s *subscriberOptions) {
-		s.routingKey = routingKey
+		s.bindingKey = bindingKey
 	}
 }
 
+//
+// Options for publisher
+//
+
+type PublisherOption func(p *publisherOptions)
+
+type publisherOptions struct {
+	contentType string
+	routingKey  string
+}
+
+func WithContentType(ct string) PublisherOption {
+	return func(p *publisherOptions) {
+		p.contentType = ct
+	}
+}
+
+func WithRoutingKey(key string) PublisherOption {
+	return func(p *publisherOptions) {
+		p.routingKey = key
+	}
+}
+
+//
+// Common definitions
+//
+
 type ConsumerFunc func(message []byte, ack func())
 
+//
+// Interface and concret struct implementation
+//
+
 type RabbitMQ interface {
-	// New(url string) (*amqp.Channel, error)
-	// Publish()
+	// Publish sends the message to broker.
+	Publish(exchangeName string, payload []byte, optFns ...PublisherOption) error
 
 	// Subscribe creates a goroutine to subscribe message from channel.
 	// Caller has responsibility to call ack() to acknowledge the message.
 	Subscribe(exchangeName, subName string, fn ConsumerFunc, opts ...SubscriberOption) error
+
+	// Close closes all connected resources, and result in the internal channel being closed.
+	// An application server should implement graceful shutdown by calling Close() before exiting.
 	Close()
 }
 
@@ -48,14 +90,46 @@ type rabbitMQ struct {
 }
 
 func (r *rabbitMQ) Close() {
-	// order matters
+	// closing order is matters. first open, last close
 	r.ch.Close()
 	r.conn.Close()
 }
 
+func (r *rabbitMQ) Publish(exchangeName string, payload []byte, optFns ...PublisherOption) error {
+	opts := publisherOptions{
+		contentType: "",
+		routingKey:  "", // default is empty string, the counterpart of Subscribe default binding key is "#"
+	}
+	for _, optFn := range optFns {
+		optFn(&opts)
+	}
+
+	if err := r.ch.ExchangeDeclare(
+		exchangeName, // name
+		"topic",      // type
+		true,         // durable
+		false,        // auto-deleted
+		false,        // internal
+		false,        // no-wait
+		nil,          // arguments
+	); err != nil {
+		return nil
+	}
+
+	return r.ch.Publish(
+		exchangeName,    // exchange
+		opts.routingKey, // routing key
+		false,           // mandatory
+		false,           // immediate
+		amqp.Publishing{
+			ContentType: opts.contentType,
+			Body:        []byte(payload),
+		})
+}
+
 func (r *rabbitMQ) Subscribe(exchangeName, subName string, consumerFn ConsumerFunc, optFns ...SubscriberOption) error {
 	opts := subscriberOptions{
-		routingKey: "#", // default to subscribe all topics. https://www.rabbitmq.com/tutorials/tutorial-five-go.html
+		bindingKey: "#", // default to subscribe all topics. https://www.rabbitmq.com/tutorials/tutorial-five-go.html
 	}
 	for _, optFn := range optFns {
 		optFn(&opts)
@@ -76,7 +150,7 @@ func (r *rabbitMQ) Subscribe(exchangeName, subName string, consumerFn ConsumerFu
 	// Binding a Queue to a Exchange, see the philosophy explained here: https://www.rabbitmq.com/tutorials/tutorial-three-go.html
 	if err := r.ch.QueueBind(
 		q.Name,          // queue name
-		opts.routingKey, // routing key
+		opts.bindingKey, // routing key for binding queue and exchange
 		exchangeName,    // exchange
 		false,           // no-wait
 		nil,             // arguments

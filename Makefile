@@ -4,14 +4,14 @@ stop-rabbitmq:
 	@echo "[`date`] Stopping previous launched RabbitMQ [if any]"
 	docker stop rabbitmq || true
 
-rabbitmq:
+start-rabbitmq:
 	@echo "[`date`] Starting RabbitMQ container"
 	docker run -d --rm --name rabbitmq\
 		-p ${MQ_PORT}:5672 \
 		rabbitmq:3.8
 
 restart-rabbitmq: stop-rabbitmq
-restart-rabbitmq: rabbitmq
+restart-rabbitmq: start-rabbitmq
 
 log-rabbitmq:
 	docker logs -f rabbitmq
@@ -32,6 +32,11 @@ pubsub_consumer:
 
 .PHONY: list_q_x_b
 list_q_x_b:
+	@echo "[`date`] Listing queues..."
 	@docker exec -it rabbitmq rabbitmqctl list_queues
+	@echo
+	@echo "[`date`] Listing exchanges..."
 	@docker exec -it rabbitmq rabbitmqctl list_exchanges
+	@echo
+	@echo "[`date`] Listing bindings..."
 	@docker exec -it rabbitmq rabbitmqctl list_bindings

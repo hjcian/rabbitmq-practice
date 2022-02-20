@@ -17,8 +17,8 @@ func failOnError(err error, msg string) {
 
 func workerSet(handler rabbitmq.RabbitMQ, setNum int) {
 	handler.Subscribe(
-		"pub_sub_hub",
-		fmt.Sprintf("workerSet-%v", setNum),
+		"pub_sub_topic",
+		fmt.Sprintf("1-workerSet-%v", setNum),
 		func(msg []byte, ack func()) {
 			log.Printf("[%v-1] Received a message: %s ...", setNum, msg)
 			time.Sleep(time.Second * 5)
@@ -27,14 +27,15 @@ func workerSet(handler rabbitmq.RabbitMQ, setNum int) {
 		},
 	)
 	handler.Subscribe(
-		"pub_sub_hub",
-		fmt.Sprintf("workerSet-%v", setNum),
+		"pub_sub_topic",
+		fmt.Sprintf("2-workerSet-%v", setNum),
 		func(msg []byte, ack func()) {
 			log.Printf("[%v-2] Received a message: %s ...", setNum, msg)
 			time.Sleep(time.Second * 5)
 			log.Printf("[%v-2] Finished message: %s", setNum, msg)
 			ack()
 		},
+		rabbitmq.WithBindingKey("*.bbb"),
 	)
 }
 
