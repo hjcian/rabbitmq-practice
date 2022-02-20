@@ -10,8 +10,8 @@ start-rabbitmq:
 		-p ${MQ_PORT}:5672 \
 		rabbitmq:3.8
 
-restart-rabbitmq: stop-rabbitmq
-restart-rabbitmq: start-rabbitmq
+restart-rabbitmq: stop-rabbitmq start-rabbitmq
+
 
 log-rabbitmq:
 	docker logs -f rabbitmq
