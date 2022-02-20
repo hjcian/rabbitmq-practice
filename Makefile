@@ -16,20 +16,19 @@ restart-rabbitmq: rabbitmq
 log-rabbitmq:
 	docker logs -f rabbitmq
 
-.PHONY: producer
-producer:
-	@go run producer/main.go
+.PHONY: helloworld_producer, helloworld_consumer
+helloworld_producer:
+	@go run hello_word/producer/producer.go
 
-.PHONY: consumer
-consumer:
-	@go run consumer/main.go
+helloworld_consumer:
+	@go run hello_word/consumer/consumer.go
 
 .PHONY: pubsub_producer, pubsub_consumer
 pubsub_producer:
-	@go run pubsub_example/producer/producer.go
+	@go run pubsub/producer/producer.go
 
 pubsub_consumer:
-	@go run pubsub_example/consumer/consumer.go
+	@go run pubsub/consumer/consumer.go
 
 .PHONY: list_q_x_b
 list_q_x_b:
